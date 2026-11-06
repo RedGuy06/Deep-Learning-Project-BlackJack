@@ -167,6 +167,19 @@
       color: var(--maroon);
     }
 
+    .recommendation-box {
+      margin-top: 18px;
+      border-color: var(--maroon);
+    }
+
+    .recommendation-value {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--maroon);
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+
     .hint {
       font-size: .85rem;
       color: var(--gray);
@@ -241,6 +254,11 @@
         </div>
       </div>
 
+      <div class="total-box recommendation-box" aria-live="polite">
+        <h3>Recommendation</h3>
+        <div id="recommendation" class="recommendation-value">—</div>
+      </div>
+
       <p class="hint">
         Totals include visible cards only. Aces count as 1 or 11.
       </p>
@@ -269,6 +287,7 @@
     function resetTotals() {
       $("playerTotal").textContent = "—";
       $("dealerTotal").textContent = "—";
+      $("recommendation").textContent = "—";
     }
 
     // Send the image to Python and display its response.
@@ -310,6 +329,9 @@
 
         $("dealerTotal").textContent =
           data.dealer_total ?? "Not found";
+
+        $("recommendation").textContent =
+          data.action || "Recommendation unavailable";
 
         $("status").textContent = "Analysis complete.";
       } catch (error) {
