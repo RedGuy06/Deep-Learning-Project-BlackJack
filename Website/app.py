@@ -1,6 +1,7 @@
 from pathlib import Path
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
 from PIL import Image, ImageOps
 from flask import Flask, request, jsonify, send_file
 
@@ -8,7 +9,7 @@ from flask import Flask, request, jsonify, send_file
 app = Flask(__name__)
 @app.get("/")
 def home():
-    return send_file(Path(__file__).parent / "index.html")
+    return send_file(Path.cwd() / "index.html")
 
 
 ##Photo Path
@@ -99,7 +100,7 @@ def predict():
 
     #model_path = Path.home() / "models" / "resnet18_realcard_combinedface.pth"
     #model_path = Path.home() / "models" / "resnet18_grayscale_combinedface.pth"
-    model_path = (Path(__file__).parent /"resnet18_realcard_androom_combinedface.pth")
+    model_path = Path.home() / "models" / "resnet18_realcard_androom_combinedface.pth"
 
 
     values=torch.load(model_path,map_location="cpu",weights_only=True)
@@ -161,15 +162,70 @@ def predict():
     player_value=hand_total(player_hand)
     dealer_value=hand_total(dealer_hand)
 
+    import pandas as pd
+ 
+    PlayerHand = player_hand
+    DealerCard = dealer_hand[0] #Should only be 1 card, but take zero just to make sure
+ 
+    PlayerValue = hand_total(PlayerHand)
 
+    minimum_total = sum(
+        1 if card == "A" else int(card)
+        for card in PlayerHand
+    )
+
+    if PlayerValue > minimum_total:
+        sheetName = "Total Dependent - Soft"
+    else:
+        sheetName = "Total Dependent - Hard"
+
+    if len(PlayerHand) == 2 and PlayerHand[0] == PlayerHand[1]:
+        sheetName = "Total Dependent - Split"
+        
+    print(f"PlayerValue: {PlayerValue}")
     
+    print(f'sheetName: {sheetName}')
+    
+    df = pd.read_excel("DeepLearningLookupTables.xlsx", sheet_name=sheetName)
+    
+    print(df.head())
+    
+    # Ensure the key column is the first column
+    key_col = "PlayerCard"
+    value_col = int(DealerCard) if DealerCard != "A" else "A"
+    
+    # Create the lookup dictionary
+    lookup_dict = df.set_index(key_col)[value_col].to_dict()
+    
+    # Example usage
+    action = lookup_dict.get(PlayerValue)
+    
+    dictionary = {'H': 'Hit',
+                'S': 'Stand',
+                'Dh': 'Double if allowed, otherwise Hit',
+                'Ds': 'Double if allowed, otherwise stand',
+                'P': 'Split',
+                'Ph': 'Split if double after split is allowed, otherwise Hit',
+                'Pd': 'Split if double after split is allowed, otherwise double and hit',
+                'Rh': 'Surrender if allowed, otherwise Hit',
+                'Rs': 'Surrender if allowed, otherwise Stand'}
+    
+   # if action in dictionary:
+    #    print(f'Action: {dictionary[action]}')
+    #else:
+     #   print('Action not found')
+    
+    recommended_action = dictionary.get(action, "Action not found")
+
+    if player_value > 21:
+        recommended_action = "Bust"
+
     return jsonify(
         player_total=player_value,
-        dealer_total=dealer_value
+        dealer_total=dealer_value,
+        action=recommended_action
     )
     
 
     
-if __name__ == "__main__":
-    app.run(port=5000)
-    
+app.run(port=5000, use_reloader=False)
