@@ -76,7 +76,7 @@ def find_cards(image):
     """Return (list of cropped PIL cards, list of 'Dealer'/'Player')."""
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
     gray = cv2.GaussianBlur(gray, (1, 1), 0)
-    _, mask = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
+    _, mask = cv2.threshold(gray, 180, 255, cv2.THRESH_BINARY)
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     split_y = image.shape[0] / 2
