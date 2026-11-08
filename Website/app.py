@@ -28,6 +28,7 @@ model = models.resnet18(weights=None)
 model.fc = nn.Linear(model.fc.in_features, len(ranks))
 model.load_state_dict(values["model_state_dict"])
 model = model.to(device).eval()
+torch.set_num_threads(1)  # less memory/CPU contention on a small instance
 
 # Same transforms used in training
 transform = transforms.Compose([
@@ -51,6 +52,8 @@ ACTIONS = {
     "Rh": "Surrender if allowed, otherwise Hit",
     "Rs": "Surrender if allowed, otherwise Stand",
 }
+
+MAX_SIDE = 1600  # longest image side processed; bigger photos are shrunk
 
 CARD_W, CARD_H = 224, 320
 TARGET = np.float32([[0, 0], [CARD_W - 1, 0],
@@ -127,8 +130,13 @@ def predict():
     if "image" not in request.files:
         return jsonify(error="No image was uploaded."), 400
 
-    with Image.open(request.files["image"].stream) as photo:
-        image = np.array(ImageOps.exif_transpose(photo).convert("RGB"))
+    # Decode at reduced size to keep memory low (big phone photos are huge raw).
+    with Image.open(request.files["image"].stream) as raw:
+        raw.draft("RGB", (MAX_SIDE, MAX_SIDE))  # JPEG: decode smaller from the start
+        photo = ImageOps.exif_transpose(raw)
+    photo.thumbnail((MAX_SIDE, MAX_SIDE))
+    image = np.array(photo.convert("RGB"))
+    del photo
 
     cards, owners = find_cards(image)
 
