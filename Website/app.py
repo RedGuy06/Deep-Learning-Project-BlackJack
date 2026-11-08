@@ -14,7 +14,30 @@ import actionLookup
 import lookupActionFromTable
 
 BASE = Path(__file__).resolve().parent
-MODEL_PATH = BASE / "models" / "resnet18_realcard_androom_combinedface.pth"
+
+
+def find_model():
+    """Use the .pth file in Website/models/, whatever it's called."""
+    folder = BASE / "models"
+    wanted = os.environ.get("MODEL_FILE")  # optional: choose a file by name
+    if wanted:
+        path = folder / wanted
+        if not path.is_file():
+            raise FileNotFoundError(f"MODEL_FILE={wanted} was not found in {folder}")
+        return path
+    found = list(folder.glob("*.pth"))
+    if not found:
+        raise FileNotFoundError(f"No .pth model file found in {folder}")
+    # Newest by modified time (file name breaks a tie).
+    newest = max(found, key=lambda p: (p.stat().st_mtime, p.name))
+    if len(found) > 1:
+        print(f"Several .pth files in {folder}; using the newest, {newest.name}. "
+              "Set MODEL_FILE to choose another.", flush=True)
+    return newest
+
+
+MODEL_PATH = find_model()
+print(f"Loading model: {MODEL_PATH.name}", flush=True)
 
 app = Flask(__name__)
 # On the host, set ALLOWED_ORIGIN to your Netlify URL, e.g. https://my-site.netlify.app
